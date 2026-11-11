@@ -2,6 +2,8 @@ package app.smartlife.patches.smartlife.ad
 
 import app.morphe.patcher.patch.resourcePatch
 import app.smartlife.patches.smartlife.shared.Constants.COMPATIBILITY_SMARTLIFE
+import app.smartlife.patches.smartlife.shared.config.configOverridePatch
+import app.smartlife.patches.smartlife.shared.config.forceConfigBoolean
 import app.smartlife.patches.smartlife.shared.removeModuleAppPipelines
 import app.smartlife.patches.smartlife.shared.setBoolResources
 import java.util.logging.Logger
@@ -15,12 +17,17 @@ val hideAdsPatch = resourcePatch(
 ) {
     compatibleWith(COMPATIBILITY_SMARTLIFE)
 
+    // The app reads these flags from ThingNGConfig fields (bools.xml is only a fallback default),
+    // so they are also forced at the flag getter.
+    dependsOn(configOverridePatch)
+
     execute {
         val flags = linkedMapOf(
             "is_admob_support" to false,
             "is_admob_banner_badge_enabled" to false,
             "is_marketing_advertising_support" to false,
         )
+        flags.forEach { (key, value) -> forceConfigBoolean(key, value) }
 
         // Also stop the ad subsystems from starting at all (module_app.json pipelines).
         removeModuleAppPipelines(
