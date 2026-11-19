@@ -3,9 +3,10 @@ package app.smartlife.patches.smartlife.misc.telemetry
 import app.morphe.patcher.patch.booleanOption
 import app.morphe.patcher.patch.resourcePatch
 import app.smartlife.patches.smartlife.shared.Constants.COMPATIBILITY_SMARTLIFE
+import app.smartlife.patches.smartlife.shared.removeAttributionPipeline
 import app.smartlife.patches.smartlife.shared.removeModuleAppPipelines
 import app.smartlife.patches.smartlife.shared.setBoolResources
-import java.util.logging.Logger
+import app.smartlife.patches.smartlife.shared.warnIfMissing
 
 @Suppress("unused")
 val disableTelemetryPatch = resourcePatch(
@@ -41,27 +42,24 @@ val disableTelemetryPatch = resourcePatch(
             flags["is_open_page_auto_track"] = false
         }
 
-        // Stop the analytics / log-upload / attribution subsystems from starting.
-        removeModuleAppPipelines(
-            listOf(
-                "com.thingclips.smart.stat.StatPipeLine",
-                "com.thingclips.smart.stat.StatUploadInitPipeline",
-                "com.thingclips.smart.logupload.LogUploadPipeLine",
-                "com.thingclips.smart.logupload.AppStartPipeLine",
-                "com.thingclips.smart.apievent.ApiEventPipleLine",
-                "com.thingclips.smart.auto.page.track.AutoPageTrackerPipeLine",
-                "com.thing.trackcontrol.TrackFilterInitPipeline",
-                "com.thingclips.smart.message.stat.NotifyPermissionStatPipeLine",
-            )
+        // Stop the analytics / log-upload subsystems from starting.
+        val pipelines = listOf(
+            "com.thingclips.smart.stat.StatPipeLine",
+            "com.thingclips.smart.stat.StatUploadInitPipeline",
+            "com.thingclips.smart.logupload.LogUploadPipeLine",
+            "com.thingclips.smart.logupload.AppStartPipeLine",
+            "com.thingclips.smart.apievent.ApiEventPipleLine",
+            "com.thingclips.smart.auto.page.track.AutoPageTrackerPipeLine",
+            "com.thing.trackcontrol.TrackFilterInitPipeline",
+            "com.thingclips.smart.message.stat.NotifyPermissionStatPipeLine",
         )
+        warnIfMissing(
+            "Disable telemetry", "module_app.json pipelines",
+            pipelines, removeModuleAppPipelines(pipelines),
+        )
+        // Attribution is tracking too, so it stays disabled here even when ads are kept.
+        removeAttributionPipeline()
 
-        val changed = setBoolResources(flags)
-        val missing = flags.keys - changed
-        if (missing.isNotEmpty()) {
-            Logger.getLogger(this::class.java.name).warning(
-                "Disable telemetry: these flags were not found in bools.xml " +
-                    "(app version may differ): $missing"
-            )
-        }
+        warnIfMissing("Disable telemetry", "bools.xml flags", flags.keys, setBoolResources(flags))
     }
 }

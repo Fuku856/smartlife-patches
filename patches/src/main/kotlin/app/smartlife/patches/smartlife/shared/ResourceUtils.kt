@@ -2,6 +2,7 @@ package app.smartlife.patches.smartlife.shared
 
 import app.morphe.patcher.patch.ResourcePatchContext
 import org.w3c.dom.Element
+import java.util.logging.Logger
 
 /**
  * SmartLife gates most optional features (AI, ads, analytics) behind
@@ -31,91 +32,82 @@ internal fun ResourcePatchContext.setBoolResources(values: Map<String, Boolean>)
     return changed
 }
 
-
 /**
- * Remove class-name entries from the startup pipeline arrays in assets/module_app.json.
- * The file is minified JSON ("A","B",...), and the given fully-qualified class names appear
- * only as array elements (pipeline initializers), so removing each quoted element with its
- * adjacent comma stops that subsystem from starting without touching the service map.
- * Unknown names (different app version) are skipped.
- *
- * @return the set of class names that were found and removed.
+ * Parse an asset JSON file, let [edit] change the tree, and write it back only if
+ * [edit] reported a change. Returns whatever [edit] returns (empty if the file is
+ * missing, so an app version without the file is simply skipped).
  */
-internal fun ResourcePatchContext.removeModuleAppPipelines(classNames: Collection<String>): Set<String> {
-    val file = get("assets/module_app.json")
+private fun ResourcePatchContext.editAssetJson(
+    path: String,
+    edit: (JsonNode) -> Set<String>,
+): Set<String> {
+    val file = get(path)
     if (!file.exists()) return emptySet()
 
-    var text = file.readText()
-    val removed = mutableSetOf<String>()
-    for (name in classNames) {
-        val quoted = "\"" + name + "\""
-        if (!text.contains(quoted)) continue
-        removed += name
-        // Order matters: first/middle element (quoted,), then last element (,quoted),
-        // then a sole element (quoted) leaving an empty array.
-        while (text.contains("$quoted,")) text = text.replace("$quoted,", "")
-        while (text.contains(",$quoted")) text = text.replace(",$quoted", "")
-        while (text.contains(quoted)) text = text.replace(quoted, "")
-    }
-    if (removed.isNotEmpty()) file.writeText(text)
-    return removed
+    val root = JsonNode.parse(file.readText())
+    val changed = edit(root)
+    if (changed.isNotEmpty()) file.writeText(root.write())
+    return changed
 }
 
 /**
- * Remove simple string entries from JSON arrays in an asset file.
- * The SmartLife UI configuration files use string arrays for page/card identifiers.
- * Unknown entries are skipped so the patch remains applicable across app versions.
+ * Remove string elements equal to one of [values] from every JSON array in the asset
+ * file at [path]. Only array elements are touched: object keys and property values
+ * that happen to contain the same text are left alone. Unknown values (different app
+ * version) are skipped.
+ *
+ * @return the set of values that were found and removed.
  */
 internal fun ResourcePatchContext.removeJsonStringEntries(
     path: String,
     values: Collection<String>,
 ): Set<String> {
-    val file = get(path)
-    if (!file.exists()) return emptySet()
-
-    var text = file.readText()
-    val removed = mutableSetOf<String>()
-    for (value in values) {
-        val quoted = "\"" + value + "\""
-        if (!text.contains(quoted)) continue
-        removed += value
-        while (text.contains("$quoted,")) text = text.replace("$quoted,", "")
-        while (text.contains(",$quoted")) text = text.replace(",$quoted", "")
-        while (text.contains(quoted)) text = text.replace(quoted, "")
-    }
-    if (removed.isNotEmpty()) file.writeText(text)
-    return removed
+    val targets = values.toSet()
+    return editAssetJson(path) { it.removeArrayStrings(targets) }
 }
 
 /**
- * Remove service-map entries whose implementation is one of the supplied classes.
- * Service-map values are simple class-name strings; removing the whole key/value pair
- * avoids leaving an unresolved interface behind.
+ * Remove class-name entries from the startup pipeline arrays in assets/module_app.json,
+ * which stops that subsystem from starting. The service map is not touched.
+ *
+ * @return the set of class names that were found and removed.
+ */
+internal fun ResourcePatchContext.removeModuleAppPipelines(classNames: Collection<String>): Set<String> =
+    removeJsonStringEntries("assets/module_app.json", classNames)
+
+/**
+ * Remove service-map entries from assets/module_app.json. The service map is
+ * `"interface":"impl"`, so an entry is removed when either its key (the service
+ * interface) or its string value (the implementation) is one of [classNames];
+ * the whole key/value pair goes, so no interface is left pointing at nothing.
+ * Only string-valued object members are considered.
+ *
+ * @return the set of class names that matched at least one entry.
  */
 internal fun ResourcePatchContext.removeModuleAppServices(
     classNames: Collection<String>,
 ): Set<String> {
-    val file = get("assets/module_app.json")
-    if (!file.exists()) return emptySet()
+    val targets = classNames.toSet()
+    return editAssetJson("assets/module_app.json") { it.removeStringMembers(targets) }
+}
 
-    var text = file.readText()
-    val removed = mutableSetOf<String>()
-    for (className in classNames) {
-        val pattern = Regex(
-            "\"(?:[^\"\\\\]|\\\\.)*\"\\s*:\\s*\"" +
-                Regex.escape(className) +
-                "\"\\s*,?"
-        )
-        val updated = pattern.replace(text, "")
-        if (updated != text) {
-            removed += className
-            text = updated
-        }
-    }
-    if (removed.isNotEmpty()) {
-        text = text.replace(Regex(",\\s*([}\\]])"), "$1")
-        text = text.replace(Regex("([\\[{])\\s*,"), "$1")
-        file.writeText(text)
-    }
-    return removed
+/**
+ * Log a warning for entries a patch expected but did not find, which usually means
+ * the app version differs and the patch had no effect for them.
+ */
+internal fun warnIfMissing(patchName: String, what: String, expected: Collection<String>, found: Set<String>) {
+    val missing = expected.toSet() - found
+    if (missing.isEmpty()) return
+    Logger.getLogger(patchName).warning(
+        "$patchName: these $what were not found (app version may differ): $missing"
+    )
+}
+
+/**
+ * AppsFlyer attribution (install/campaign tracking). It is both ad-related and
+ * telemetry, so both "Hide ads" and "Disable telemetry" remove it; whichever runs
+ * second finds it already gone, which is why this is not reported as missing.
+ */
+internal fun ResourcePatchContext.removeAttributionPipeline() {
+    removeModuleAppPipelines(listOf("com.thingclips.smart.attribution.common.AttributionConfigPipeline"))
 }
