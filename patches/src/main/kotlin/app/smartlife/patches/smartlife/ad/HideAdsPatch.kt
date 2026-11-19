@@ -2,15 +2,17 @@ package app.smartlife.patches.smartlife.ad
 
 import app.morphe.patcher.patch.resourcePatch
 import app.smartlife.patches.smartlife.shared.Constants.COMPATIBILITY_SMARTLIFE
+import app.smartlife.patches.smartlife.shared.removeJsonStringEntries
 import app.smartlife.patches.smartlife.shared.removeModuleAppPipelines
+import app.smartlife.patches.smartlife.shared.removeModuleAppServices
 import app.smartlife.patches.smartlife.shared.setBoolResources
 import java.util.logging.Logger
 
 @Suppress("unused")
 val hideAdsPatch = resourcePatch(
     name = "Hide ads",
-    description = "Disables in-app ads: AdMob/PID banners and the Tuya marketing ad service. " +
-        "Works by turning off the app's own advertising feature flags.",
+    description = "Disables in-app ads, promotional banners, ad push, and ad-related attribution. " +
+        "Stops the corresponding advertising services and removes Home/Profile ad entries.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_SMARTLIFE)
@@ -33,6 +35,33 @@ val hideAdsPatch = resourcePatch(
                 "com.thingclips.smart.advertisement.pid.pipeline.PidAdvertiseLogoutPipeline",
                 "com.thingclips.smart.advertisement.admob.lifecycle.AdMobManagerLogoutPipeline",
                 "com.thingclips.smart.activitypush.api.ActivityAdPushManagerPipeline",
+                "com.thingclips.smart.attribution.common.AttributionConfigPipeline",
+            )
+        )
+
+        removeModuleAppServices(
+            listOf(
+                "com.thingclips.smart.advertisement.service.AbsAdvertisementService",
+                "com.thingclips.smart.advertisement.pid.service.AbsMarketingBoothService",
+                "com.thingclips.smart.activitypush.api.AbsActivityAdPushService",
+                "com.thingclips.smart.attribution.common.AppsFlyerService",
+            )
+        )
+
+        removeJsonStringEntries(
+            "assets/home_fragment_new.json",
+            listOf(
+                "ThingMainPageMarketing",
+                "ThingMainPagePidBanner",
+                "ThingShoppingMall",
+            )
+        )
+        removeJsonStringEntries(
+            "assets/personal_center_config_list.json",
+            listOf(
+                "personal_center_advertising",
+                "personal_center_welfare_banner",
+                "personal_center_mall",
             )
         )
 

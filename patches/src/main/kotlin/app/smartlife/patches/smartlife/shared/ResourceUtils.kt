@@ -60,3 +60,62 @@ internal fun ResourcePatchContext.removeModuleAppPipelines(classNames: Collectio
     if (removed.isNotEmpty()) file.writeText(text)
     return removed
 }
+
+/**
+ * Remove simple string entries from JSON arrays in an asset file.
+ * The SmartLife UI configuration files use string arrays for page/card identifiers.
+ * Unknown entries are skipped so the patch remains applicable across app versions.
+ */
+internal fun ResourcePatchContext.removeJsonStringEntries(
+    path: String,
+    values: Collection<String>,
+): Set<String> {
+    val file = get(path)
+    if (!file.exists()) return emptySet()
+
+    var text = file.readText()
+    val removed = mutableSetOf<String>()
+    for (value in values) {
+        val quoted = "\"" + value + "\""
+        if (!text.contains(quoted)) continue
+        removed += value
+        while (text.contains("$quoted,")) text = text.replace("$quoted,", "")
+        while (text.contains(",$quoted")) text = text.replace(",$quoted", "")
+        while (text.contains(quoted)) text = text.replace(quoted, "")
+    }
+    if (removed.isNotEmpty()) file.writeText(text)
+    return removed
+}
+
+/**
+ * Remove service-map entries whose implementation is one of the supplied classes.
+ * Service-map values are simple class-name strings; removing the whole key/value pair
+ * avoids leaving an unresolved interface behind.
+ */
+internal fun ResourcePatchContext.removeModuleAppServices(
+    classNames: Collection<String>,
+): Set<String> {
+    val file = get("assets/module_app.json")
+    if (!file.exists()) return emptySet()
+
+    var text = file.readText()
+    val removed = mutableSetOf<String>()
+    for (className in classNames) {
+        val pattern = Regex(
+            "\"(?:[^\"\\\\]|\\\\.)*\"\\s*:\\s*\"" +
+                Regex.escape(className) +
+                "\"\\s*,?"
+        )
+        val updated = pattern.replace(text, "")
+        if (updated != text) {
+            removed += className
+            text = updated
+        }
+    }
+    if (removed.isNotEmpty()) {
+        text = text.replace(Regex(",\\s*([}\\]])"), "$1")
+        text = text.replace(Regex("([\\[{])\\s*,"), "$1")
+        file.writeText(text)
+    }
+    return removed
+}

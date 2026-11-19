@@ -50,7 +50,6 @@ val disableTelemetryPatch = resourcePatch(
                 "com.thingclips.smart.logupload.AppStartPipeLine",
                 "com.thingclips.smart.apievent.ApiEventPipleLine",
                 "com.thingclips.smart.auto.page.track.AutoPageTrackerPipeLine",
-                "com.thingclips.smart.attribution.common.AttributionConfigPipeline",
                 "com.thing.trackcontrol.TrackFilterInitPipeline",
                 "com.thingclips.smart.message.stat.NotifyPermissionStatPipeLine",
             )

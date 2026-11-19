@@ -51,7 +51,7 @@ bundle builds to `patches/build/libs/patches-1.0.0.mpp`.
 | Patch | File | Flags set to false |
 |-------|------|--------------------|
 | Disable AI features | `ai/DisableAiPatch.kt` | `is_ai_assistant_support`, `is_ai_phone_support`, `support_ai`, `is_support_on_app_ai`, `is_aiAssistant_show_in_nav`, `is_aiAssistant_show_in_deeppull`, `ai_assistant_support_{action,greeting,inspiration}`, `support_ai_memory_manage`, `support_ble_gpt`, `batch_setting_xiaozhi`; + option: `support_agent_tab`, `assistant_tab` |
-| Hide ads | `ad/HideAdsPatch.kt` | `is_admob_support`, `is_admob_banner_badge_enabled`, `is_marketing_advertising_support` |
+| Hide ads | `ad/HideAdsPatch.kt` | `is_admob_support`, `is_admob_banner_badge_enabled`, `is_marketing_advertising_support`; ad pipelines/services and Home/Profile promotional entries |
 | Disable telemetry | `misc/telemetry/DisableTelemetryPatch.kt` | `firebase_analytics_enable`, `firebase_crash_enable`, `is_open_page_auto_track` |
 
 Each is ON by default and reversible via Morphe patch options. Unknown flags on a
@@ -72,12 +72,11 @@ they depend on matching obfuscated code and on an iterative build loop:
   `AppsFlyerService`, `AbsActivityAdPushService`, `AbsMarketingBoothService`, …).
   Risk: removing a service an active screen resolves can crash on open → gate behind
   per-item options and test.
-- **UI config edits**: remove `ThingMainPageMarketing` / `ThingMainPagePidBanner` /
-  `ThingShoppingMall` from `home_fragment_new.json`; `personal_center_advertising` /
-  `personal_center_welfare_banner` / `personal_center_mall` from
-  `personal_center_config_list.json`; AI/agent tab from `tab_config.json`.
-  (Confirm the Morphe patcher exposes `assets/` as editable files; if not, edit via a
-  bytecode hook on the asset loader instead.)
+- **広告 UI config edits**: `Hide ads` removes `ThingMainPageMarketing` /
+  `ThingMainPagePidBanner` / `ThingShoppingMall` from `home_fragment_new.json` and
+  `personal_center_advertising` / `personal_center_welfare_banner` /
+  `personal_center_mall` from `personal_center_config_list.json`. `tab_config.json`
+  remains unchanged because it is not an ad-specific entry.
 - **AI bar final gate** (bytecode): `com.thingclips.smart.ai.assistant.api.AIAssistantEnableService`
   impl `()Z` visibility methods → return false. Device-panel floating ball:
   `com.thingclips.smart.panel.common.ai.AIBarContainerMonitor` injection site.
