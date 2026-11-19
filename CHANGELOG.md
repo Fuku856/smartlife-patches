@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/Fuku856/smartlife-patches/compare/v1.1.0...v1.2.0) (2026-11-19)
+
+### ✨ New Features
+
+* SmartLife 7.12.6 に対応し、Smart App タブとシーンのお勧めを非表示にするパッチを追加 ([#9](https://github.com/Fuku856/smartlife-patches/issues/9)) ([fef6628](https://github.com/Fuku856/smartlife-patches/commit/fef6628ba349cc71702af49db079a97f877a27dc))
+
 ## [1.1.0](https://github.com/Fuku856/smartlife-patches/compare/v1.0.0...v1.1.0) (2026-11-10)
 
 ### ✨ New Features
