@@ -3,6 +3,8 @@ package app.smartlife.patches.smartlife.ad
 import app.morphe.patcher.patch.booleanOption
 import app.morphe.patcher.patch.resourcePatch
 import app.smartlife.patches.smartlife.shared.Constants.COMPATIBILITY_SMARTLIFE
+import app.smartlife.patches.smartlife.shared.config.configOverridePatch
+import app.smartlife.patches.smartlife.shared.config.forceConfigBoolean
 import app.smartlife.patches.smartlife.shared.HOME_FRAGMENT_JSON
 import app.smartlife.patches.smartlife.shared.MODULE_APP_JSON
 import app.smartlife.patches.smartlife.shared.PERSONAL_CENTER_JSON
@@ -52,6 +54,10 @@ val hideAdsPatch = resourcePatch(
 ) {
     compatibleWith(COMPATIBILITY_SMARTLIFE)
 
+    // The app reads these flags from ThingNGConfig fields (bools.xml is only a fallback default),
+    // so they are also forced at the flag getter.
+    dependsOn(configOverridePatch)
+
     val removePipelines = booleanOption(
         key = "removeAdPipelines",
         default = true,
@@ -81,6 +87,7 @@ val hideAdsPatch = resourcePatch(
             "is_admob_banner_badge_enabled" to false,
             "is_marketing_advertising_support" to false,
         )
+        flags.forEach { (key, value) -> forceConfigBoolean(key, value) }
         warnIfMissing(PATCH_NAME, "bools.xml flags", flags.keys, setBoolResources(flags))
 
         val pipelines = removePipelines.value ?: true

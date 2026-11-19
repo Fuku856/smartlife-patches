@@ -3,6 +3,8 @@ package app.smartlife.patches.smartlife.misc.telemetry
 import app.morphe.patcher.patch.booleanOption
 import app.morphe.patcher.patch.resourcePatch
 import app.smartlife.patches.smartlife.shared.Constants.COMPATIBILITY_SMARTLIFE
+import app.smartlife.patches.smartlife.shared.config.configOverridePatch
+import app.smartlife.patches.smartlife.shared.config.forceConfigBoolean
 import app.smartlife.patches.smartlife.shared.MODULE_APP_JSON
 import app.smartlife.patches.smartlife.shared.editAssetJson
 import app.smartlife.patches.smartlife.shared.removeAttributionPipeline
@@ -17,6 +19,10 @@ val disableTelemetryPatch = resourcePatch(
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_SMARTLIFE)
+
+    // The app reads these flags from ThingNGConfig fields (bools.xml is only a fallback default),
+    // so they are also forced at the flag getter.
+    dependsOn(configOverridePatch)
 
     val disableFirebase = booleanOption(
         key = "disableFirebase",
@@ -51,6 +57,7 @@ val disableTelemetryPatch = resourcePatch(
             flags["is_open_page_auto_track"] = false
         }
 
+        flags.forEach { (key, value) -> forceConfigBoolean(key, value) }
         if (stopTrackingSubsystems.value ?: true) {
             val pipelines = listOf(
                 "com.thingclips.smart.stat.StatPipeLine",
