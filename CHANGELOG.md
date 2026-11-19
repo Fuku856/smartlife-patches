@@ -1,3 +1,9 @@
+## [1.2.1-dev.1](https://github.com/Fuku856/smartlife-patches/compare/v1.2.0...v1.2.1-dev.1) (2026-11-19)
+
+### 🐛 Bug Fixes
+
+* remove ads and ad-related traffic ([#10](https://github.com/Fuku856/smartlife-patches/issues/10)) ([ef31c59](https://github.com/Fuku856/smartlife-patches/commit/ef31c5977a8483b812283df94d41403de1a29312)), closes [#11](https://github.com/Fuku856/smartlife-patches/issues/11)
+
 ## [1.2.0](https://github.com/Fuku856/smartlife-patches/compare/v1.1.0...v1.2.0) (2026-11-19)
 
 ### ✨ New Features
