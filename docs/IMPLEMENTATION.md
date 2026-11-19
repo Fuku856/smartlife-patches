@@ -53,7 +53,7 @@ bundle builds to `patches/build/libs/patches-1.0.0.mpp`.
 |-------|------|--------------------|
 | Disable AI features | `ai/DisableAiPatch.kt` | `is_ai_assistant_support`, `is_ai_phone_support`, `support_ai`, `is_support_on_app_ai`, `is_aiAssistant_show_in_nav`, `is_aiAssistant_show_in_deeppull`, `ai_assistant_support_{action,greeting,inspiration}`, `support_ai_memory_manage`, `support_ble_gpt`, `batch_setting_xiaozhi`; + option: `support_agent_tab`, `assistant_tab` |
 | Hide ads | `ad/HideAdsPatch.kt` | `is_admob_support`, `is_admob_banner_badge_enabled`, `is_marketing_advertising_support`; + options: ad pipelines (on), Home/Profile promotional entries (on), ad `serviceMap` entries (off, experimental) |
-| Disable telemetry | `misc/telemetry/DisableTelemetryPatch.kt` | `firebase_analytics_enable`, `firebase_crash_enable`, `is_open_page_auto_track` |
+| Disable telemetry | `misc/telemetry/DisableTelemetryPatch.kt` | `firebase_analytics_enable`, `firebase_crash_enable`, `is_open_page_auto_track`; + option: tracking/attribution pipelines (on) |
 
 Each is ON by default and reversible via Morphe patch options. Unknown flags on a
 different app version are skipped with a warning (not a hard failure).
@@ -75,9 +75,12 @@ they depend on matching obfuscated code and on an iterative build loop:
   per-item options and test. The ad services are now behind the `Hide ads` option
   `removeAdServices` (off by default, **not yet verified on device**). Entries are matched
   on either the interface key or the impl value, and the whole pair is removed.
-- **Asset JSON editing** (`shared/AssetJson.kt`): assets are parsed into a tree and written
-  back minified, so only real array elements / `serviceMap` pairs are removed, whatever the
-  whitespace. Expected entries that are not found are logged as warnings.
+- **Asset JSON editing** (`shared/AssetJson.kt`): assets are parsed into a tree (once per
+  patch per file) and written back minified, so only real array elements and pairs inside
+  `serviceMap` objects are removed, whatever the whitespace. Home/Profile entries match a
+  string element or an object element whose direct string member is the id. Expected
+  entries that are not found, and files that are missing or cannot be parsed, are logged as
+  warnings and skipped instead of failing the patch.
 - **広告 UI config edits**: `Hide ads` removes `ThingMainPageMarketing` /
   `ThingMainPagePidBanner` / `ThingShoppingMall` from `home_fragment_new.json` and
   `personal_center_advertising` / `personal_center_welfare_banner` /

@@ -27,7 +27,7 @@ Click here to add these patches to Morphe: https://morphe.software/add-source?gi
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
-| [Disable telemetry](#disable-telemetry) | Disables Firebase Analytics/Crashlytics and automatic page tracking. Works by turning off the app's own analytics feature flags. | • Disable Firebase<br>• Disable page tracking |
+| [Disable telemetry](#disable-telemetry) | Disables Firebase Analytics/Crashlytics and automatic page tracking, and stops the app's analytics, log-upload and attribution subsystems from starting. | • Disable Firebase<br>• Disable page tracking<br>• Stop tracking subsystems |
 | [Hide AI assistant](#hide-ai-assistant) | Hides the "Hey Tuya" AI assistant added in app 7.0 (the home AI bar, the device-panel floating ball and the B2-gated entry points). This is a runtime toggle: it can be turned on and off in the in-app "SmartLife Patches" settings screen (long-press the settings button in the profile tab, or the Settings screen toolbar). Hidden by default. |  |
 | [Hide ads](#hide-ads) | Disables in-app ads, promotional banners, ad push, and ad-related attribution. Stops the corresponding advertising subsystems and removes Home/Profile ad entries. | • Stop ad subsystems<br>• Remove Home/Profile ad entries<br>• Remove ad services (experimental) |
 | [Hide home recommendations](#hide-home-recommendations) | Hides the "おすすめ" (Recommended) cards on the home screen. This is a runtime toggle in the in-app "SmartLife Patches" settings screen. Hidden by default. |  |

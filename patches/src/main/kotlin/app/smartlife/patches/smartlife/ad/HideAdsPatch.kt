@@ -3,10 +3,11 @@ package app.smartlife.patches.smartlife.ad
 import app.morphe.patcher.patch.booleanOption
 import app.morphe.patcher.patch.resourcePatch
 import app.smartlife.patches.smartlife.shared.Constants.COMPATIBILITY_SMARTLIFE
+import app.smartlife.patches.smartlife.shared.HOME_FRAGMENT_JSON
+import app.smartlife.patches.smartlife.shared.MODULE_APP_JSON
+import app.smartlife.patches.smartlife.shared.PERSONAL_CENTER_JSON
+import app.smartlife.patches.smartlife.shared.editAssetJson
 import app.smartlife.patches.smartlife.shared.removeAttributionPipeline
-import app.smartlife.patches.smartlife.shared.removeJsonStringEntries
-import app.smartlife.patches.smartlife.shared.removeModuleAppPipelines
-import app.smartlife.patches.smartlife.shared.removeModuleAppServices
 import app.smartlife.patches.smartlife.shared.setBoolResources
 import app.smartlife.patches.smartlife.shared.warnIfMissing
 
@@ -82,31 +83,39 @@ val hideAdsPatch = resourcePatch(
         )
         warnIfMissing(PATCH_NAME, "bools.xml flags", flags.keys, setBoolResources(flags))
 
-        if (removePipelines.value ?: true) {
-            warnIfMissing(
-                PATCH_NAME, "module_app.json pipelines",
-                AD_PIPELINES, removeModuleAppPipelines(AD_PIPELINES),
-            )
-            removeAttributionPipeline()
-        }
-
-        if (removeServices.value ?: false) {
-            warnIfMissing(
-                PATCH_NAME, "module_app.json services",
-                AD_SERVICES, removeModuleAppServices(AD_SERVICES),
-            )
+        val pipelines = removePipelines.value ?: true
+        val services = removeServices.value ?: false
+        if (pipelines || services) {
+            // One parse/write of module_app.json for all of this patch's edits.
+            editAssetJson(PATCH_NAME, MODULE_APP_JSON) { root ->
+                var changed = false
+                if (pipelines) {
+                    val removed = root.removeArrayElements(AD_PIPELINES.toSet())
+                    warnIfMissing(PATCH_NAME, "module_app.json pipelines", AD_PIPELINES, removed)
+                    changed = removed.isNotEmpty()
+                    changed = removeAttributionPipeline(PATCH_NAME, root) || changed
+                }
+                if (services) {
+                    val removed = root.removeServiceMapEntries(AD_SERVICES.toSet())
+                    warnIfMissing(PATCH_NAME, "module_app.json services", AD_SERVICES, removed)
+                    changed = removed.isNotEmpty() || changed
+                }
+                changed
+            }
         }
 
         if (removeEntries.value ?: true) {
-            warnIfMissing(
-                PATCH_NAME, "home_fragment_new.json entries",
-                HOME_AD_ENTRIES, removeJsonStringEntries("assets/home_fragment_new.json", HOME_AD_ENTRIES),
-            )
-            warnIfMissing(
-                PATCH_NAME, "personal_center_config_list.json entries",
-                PROFILE_AD_ENTRIES,
-                removeJsonStringEntries("assets/personal_center_config_list.json", PROFILE_AD_ENTRIES),
-            )
+            for ((path, entries) in listOf(
+                HOME_FRAGMENT_JSON to HOME_AD_ENTRIES,
+                PERSONAL_CENTER_JSON to PROFILE_AD_ENTRIES,
+            )) {
+                editAssetJson(PATCH_NAME, path) { root ->
+                    // Cards/rows may be plain ids or objects carrying the id as a member.
+                    val removed = root.removeArrayElements(entries.toSet(), matchObjectElements = true)
+                    warnIfMissing(PATCH_NAME, "${path.substringAfterLast('/')} entries", entries, removed)
+                    removed.isNotEmpty()
+                }
+            }
         }
     }
 }
