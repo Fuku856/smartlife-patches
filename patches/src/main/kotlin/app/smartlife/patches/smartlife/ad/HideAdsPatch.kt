@@ -26,11 +26,21 @@ private val AD_PIPELINES = listOf(
     "com.thingclips.smart.activitypush.api.ActivityAdPushManagerPipeline",
 )
 
+/**
+ * AdMob startup/login pipelines added in 7.12.6 (7.12.0 only has the logout one, which is in
+ * [AD_PIPELINES]). Removed when present, without a "not found" warning on older versions.
+ */
+private val ADMOB_PIPELINES_SINCE_7_12_6 = listOf(
+    "com.thingclips.smart.advertisement.admob.lifecycle.AdMobManagerPipeline",
+    "com.thingclips.smart.advertisement.admob.lifecycle.AdMobManagerLoginPipeline",
+)
+
+// serviceMap interface names, as in module_app.json of 7.12.0 and 7.12.6.
 private val AD_SERVICES = listOf(
-    "com.thingclips.smart.advertisement.service.AbsAdvertisementService",
-    "com.thingclips.smart.advertisement.pid.service.AbsMarketingBoothService",
+    "com.thingclips.smart.advertisement.api.AbsAdvertisementService",
+    "com.thingclips.smart.marketing.booth.api.AbsMarketingBoothService",
     "com.thingclips.smart.activitypush.api.AbsActivityAdPushService",
-    "com.thingclips.smart.attribution.common.AppsFlyerService",
+    "com.thingclips.smart.appsflyer.api.AppsFlyerService",
 )
 
 private val HOME_AD_ENTRIES = listOf(
@@ -48,7 +58,8 @@ private val PROFILE_AD_ENTRIES = listOf(
 @Suppress("unused")
 val hideAdsPatch = resourcePatch(
     name = PATCH_NAME,
-    description = "Disables in-app ads, promotional banners, ad push, and ad-related attribution. " +
+    description = "Disables in-app ads (including the AdMob native ad on the home screen), " +
+        "promotional banners, ad push, and ad-related attribution. " +
         "Stops the corresponding advertising subsystems and removes Home/Profile ad entries.",
     default = true,
 ) {
@@ -57,6 +68,10 @@ val hideAdsPatch = resourcePatch(
     // The app reads these flags from ThingNGConfig fields (bools.xml is only a fallback default),
     // so they are also forced at the flag getter.
     dependsOn(configOverridePatch)
+
+    // The AdMob native ad above the home "favorites" cards reads none of these flags and has no
+    // JSON entry, so it is stopped in code.
+    dependsOn(adSlotsBytecodePatch)
 
     val removePipelines = booleanOption(
         key = "removeAdPipelines",
@@ -97,7 +112,7 @@ val hideAdsPatch = resourcePatch(
             editAssetJson(PATCH_NAME, MODULE_APP_JSON) { root ->
                 var changed = false
                 if (pipelines) {
-                    val removed = root.removeArrayElements(AD_PIPELINES.toSet())
+                    val removed = root.removeArrayElements((AD_PIPELINES + ADMOB_PIPELINES_SINCE_7_12_6).toSet())
                     warnIfMissing(PATCH_NAME, "module_app.json pipelines", AD_PIPELINES, removed)
                     changed = removed.isNotEmpty()
                     changed = removeAttributionPipeline(PATCH_NAME, root) || changed
